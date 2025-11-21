@@ -12,8 +12,8 @@ importers:
         specifier: ^3.2.0
         version: 3.3.1
       '@flexiweb/core':
-        specifier: 3.60.1
-        version: 3.60.1(@payloadcms/translations@3.60.0)(payload@3.60.0(graphql@16.11.0)(typescript@5.7.3))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        specifier: 3.60.2
+        version: 3.60.2(@payloadcms/translations@3.60.0)(payload@3.60.0(graphql@16.11.0)(typescript@5.7.3))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@payloadcms/db-sqlite':
         specifier: 3.60.0
         version: 3.60.0(payload@3.60.0(graphql@16.11.0)(typescript@5.7.3))
@@ -644,8 +644,8 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  '@flexiweb/core@3.60.1':
-    resolution: {integrity: sha512-E7D6fE3opBfMT4K1z55PmG/ErgBekZYJ+GSKQ/fDYqsdZ8CItV9b9xLGUVaC3Tytfg7nrdnufenP/J3lKI45bw==}
+  '@flexiweb/core@3.60.2':
+    resolution: {integrity: sha512-w0ZLSKwEbqSLNJcIObn1UWe6eubYs5kF8ru+zTstDXIkciBYFYdEm4ql/q9TPk2t7E4eH2pTTLoabVB5AoKsOQ==}
     engines: {node: ^18.20.2 || >=20.9.0, pnpm: ^9 || ^10}
     peerDependencies:
       '@payloadcms/translations': 3.60.0
@@ -5307,7 +5307,7 @@ snapshots:
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
 
-  '@flexiweb/core@3.60.1(@payloadcms/translations@3.60.0)(payload@3.60.0(graphql@16.11.0)(typescript@5.7.3))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+  '@flexiweb/core@3.60.2(@payloadcms/translations@3.60.0)(payload@3.60.0(graphql@16.11.0)(typescript@5.7.3))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
       '@payloadcms/translations': 3.60.0
       libphonenumber-js: 1.12.24

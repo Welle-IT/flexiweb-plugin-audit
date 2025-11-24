@@ -1,6 +1,11 @@
+import { isModuleEnabled } from '@flexiweb/core/utils'
 import { type Config, deepMerge, type Field } from 'payload'
 
-import type { AuditPluginConfig, IncomingCollectionVersions } from './types.js'
+import type {
+  AuditPluginConfig,
+  FlexiwebAuditRegistry,
+  IncomingCollectionVersions,
+} from './types.js'
 
 import { getAuditLogs } from './collections/audits/config.js'
 import { AUDIT_LOGS_SLUG, DEFAULT_USERNAME_FIELD } from './constants.js'
@@ -22,10 +27,23 @@ import { processAuditGroupFields } from './utils.js'
 export const flexiwebAuditPlugin =
   (pluginOptions: AuditPluginConfig) =>
   (config: Config): Config => {
-    if (!config.collections) {
-      config.collections = []
+    if (!isModuleEnabled(config, 'core')) {
+      throw new Error('@flexiweb/core is required to use @flexiweb/audit')
     }
 
+    const auditRegistry: FlexiwebAuditRegistry = {
+      enabled: true,
+      flags: [],
+      options: {},
+    }
+
+    config.custom = config.custom || {}
+    config.custom.flexiweb = {
+      ...config.custom.flexiweb,
+      audit: auditRegistry,
+    }
+
+    config.collections = config.collections || []
     config.collections.push(getAuditLogs(pluginOptions))
     const exludedCollections = pluginOptions.excludedCollections || []
     exludedCollections.push(AUDIT_LOGS_SLUG)
@@ -68,9 +86,7 @@ export const flexiwebAuditPlugin =
         }
       })
 
-    if (!config.globals) {
-      config.globals = []
-    }
+    config.globals = config.globals ?? []
 
     config.globals
       .filter((x) => !pluginOptions.excludedGlobals?.includes(x.slug))
@@ -111,15 +127,29 @@ export const flexiwebAuditPlugin =
 
       config.jobs.autoRun = config.jobs.autoRun || []
       if (typeof config.jobs.autoRun === 'function') {
-        throw new Error('Plugin config.jobs.autoRun must be an array of objects')
+        const original = config.jobs.autoRun
+
+        config.jobs.autoRun = async (payload) => {
+          const result = await Promise.resolve(original(payload))
+
+          return [
+            ...result,
+            {
+              cron: '* * * * *',
+              limit: 500,
+              queue: 'audit',
+            },
+          ]
+        }
+      } else {
+        config.jobs.autoRun = deepMerge(config.jobs.autoRun, [
+          {
+            cron: '* * * * *', // every minute
+            limit: 500,
+            queue: 'audit',
+          },
+        ])
       }
-      config.jobs.autoRun = deepMerge(config.jobs.autoRun, [
-        {
-          cron: '* * * * *', // every minute
-          limit: 500,
-          queue: 'audit',
-        },
-      ])
     }
 
     return config

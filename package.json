@@ -1,6 +1,6 @@
 {
   "name": "@flexiweb/audit",
-  "version": "3.60.1",
+  "version": "3.60.2",
   "description": "Audit plugin for Flexiweb powered by PayloadCMS. Adds audit fields to collections, provides the possibility to full-Audit using dedicated collection.",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
@@ -60,7 +60,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
-    "@flexiweb/core": "3.60.2",
+    "@flexiweb/core": "3.60.3",
     "@payloadcms/db-sqlite": "3.60.0",
     "@payloadcms/eslint-config": "3.9.0",
     "@payloadcms/next": "3.60.0",
@@ -131,6 +131,6 @@
   },
   "registry": "https://registry.npmjs.org/",
   "peerDependencies": {
-    "@flexiweb/core": "3.60.2"
+    "@flexiweb/core": "3.60.3"
   }
 }

@@ -1,3 +1,4 @@
+import type { FlexiwebRegistryItem } from '@flexiweb/core/types'
 import type { CollectionConfig, CollectionSlug, GlobalSlug, JSONField, TextField } from 'payload'
 
 /**
@@ -52,3 +53,5 @@ export enum AuditActionType {
   READ = 'read',
   UPDATE = 'update',
 }
+
+export type FlexiwebAuditRegistry = FlexiwebRegistryItem

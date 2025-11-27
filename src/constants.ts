@@ -24,9 +24,12 @@ export const GLOBAL_REDACT_KEYS = [
   'sessionSecret',
   'salt',
   'hash',
-  'loginAttempts',
-  'lockUntil',
   'sessions',
   'cvc',
 ]
 export const GLOBAL_IGNORE_KEYS = ['loginAt', 'lastLogin', 'audit']
+export const DEFAULT_QUEUE_AUTORUN_CONFIG = {
+  cron: '* * * * *', // every minute
+  limit: 500,
+  queue: 'audit',
+}

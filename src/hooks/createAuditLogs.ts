@@ -6,7 +6,7 @@ import type {
 } from 'payload'
 
 import { AuditActionType, AuditType } from '../types.js'
-import { enqueueAuditLog, filterChangedKeysKeepObjects } from '../utils.js'
+import { computeAuditDiff, enqueueAuditLog } from '../utils.js'
 
 export const createAuditLogsAfterCollectionChange: CollectionAfterChangeHook = async ({
   collection,
@@ -26,29 +26,18 @@ export const createAuditLogsAfterCollectionChange: CollectionAfterChangeHook = a
     }
   }
 
-  if (operation === 'create') {
-    const { after } = filterChangedKeysKeepObjects(previousDoc, doc)
-    await enqueueAuditLog({
-      slug: collection.slug,
-      type: AuditType.COLLECTION,
-      action: AuditActionType.CREATE,
-      context: { data: { after }, user },
-      docId: doc?.id?.toString() || '-',
-      req,
-      userId: user?.id.toString() || '-',
-    })
-  } else {
-    const { after, before } = filterChangedKeysKeepObjects(previousDoc, doc)
-    await enqueueAuditLog({
-      slug: collection.slug,
-      type: AuditType.COLLECTION,
-      action: AuditActionType.UPDATE,
-      context: { data: { after, before }, user },
-      docId: doc?.id?.toString() || '-',
-      req,
-      userId: user?.id.toString() || '-',
-    })
-  }
+  const { after, before } = computeAuditDiff(previousDoc, doc, collection.fields)
+
+  await enqueueAuditLog({
+    slug: collection.slug,
+    type: AuditType.COLLECTION,
+    action: operation === 'create' ? AuditActionType.CREATE : AuditActionType.UPDATE,
+    // eslint-disable-next-line perfectionist/sort-objects
+    context: operation === 'create' ? { data: { after }, user } : { data: { before, after }, user },
+    docId: doc?.id?.toString() || '-',
+    req,
+    userId: user?.id.toString() || '-',
+  })
 
   return doc
 }
@@ -69,7 +58,8 @@ export const createAuditLogsAfterCollectionDelete: CollectionAfterDeleteHook = a
     }
   }
 
-  const { before } = filterChangedKeysKeepObjects(doc, doc)
+  const { before } = computeAuditDiff(doc, null, collection.fields)
+
   await enqueueAuditLog({
     slug: collection.slug,
     type: AuditType.COLLECTION,
@@ -98,12 +88,15 @@ export const createAuditLogsAfterGlobalChange: GlobalAfterChangeHook = async ({
       role: req.user.role || '-',
     }
   }
-  const { after, before } = filterChangedKeysKeepObjects(previousDoc, doc)
+
+  const { after, before } = computeAuditDiff(previousDoc, doc, global.fields)
+
   await enqueueAuditLog({
     slug: global.slug,
     type: AuditType.GLOBAL,
     action: AuditActionType.UPDATE,
-    context: { data: { after, before }, user },
+    // eslint-disable-next-line perfectionist/sort-objects
+    context: { data: { before, after }, user },
     docId: doc?.id?.toString() || '-',
     req,
     userId: user?.id.toString() || '-',

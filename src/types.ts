@@ -1,5 +1,14 @@
 import type { FlexiwebRegistryItem } from '@flexiweb/core/types'
-import type { CollectionConfig, CollectionSlug, GlobalSlug, JSONField, TextField } from 'payload'
+import type {
+  CollapsibleField,
+  CollectionConfig,
+  CollectionSlug,
+  DateField,
+  GlobalSlug,
+  GroupField,
+  JSONField,
+  TextField,
+} from 'payload'
 
 /**
  * Configuration options for the @flexiweb/audit plugin.
@@ -13,6 +22,7 @@ export type AuditPluginConfig = {
     excludedGlobals: GlobalSlug[]
   }
   overrides?: {
+    auditGroupFieldOverrides: AuditGroupFieldOverrides
     audits?: {
       fieldOverrides?: AuditFieldOverrides
       overrides?: Omit<CollectionConfig, 'fields' | 'slug'>
@@ -25,6 +35,24 @@ export type IncomingCollectionVersions = {
   drafts?: boolean
   maxPerDoc?: number
 }
+
+export type AuditGroupFieldOverrides = {
+  collapsibleOverrides?: Omit<CollapsibleField, 'type'>
+  createdAtOverrides?: AuditGroupFieldCreatedAtOverrides
+  createdByOverrides?: AuditGroupFieldCreatedByOverrides
+  groupOverrides: Omit<GroupField, 'name' | 'type'>
+  publishedAtOverrides?: AuditGroupFieldPublishedAtOverrides
+  publishedByOverrides?: AuditGroupFieldPublishedByOverrides
+  updatedAtOverrides?: AuditGroupFieldUpdatedAtOverrides
+  updatedByOverrides?: AuditGroupFieldUpdatedByOverrides
+}
+
+export type AuditGroupFieldPublishedByOverrides = Omit<TextField, 'name' | 'type'>
+export type AuditGroupFieldPublishedAtOverrides = Omit<DateField, 'name' | 'type'>
+export type AuditGroupFieldCreatedByOverrides = Omit<TextField, 'name' | 'type'>
+export type AuditGroupFieldCreatedAtOverrides = Omit<DateField, 'name' | 'type'>
+export type AuditGroupFieldUpdatedByOverrides = Omit<TextField, 'name' | 'type'>
+export type AuditGroupFieldUpdatedAtOverrides = Omit<DateField, 'name' | 'type'>
 
 export type AuditFieldTypeOverrides = Omit<TextField, 'access' | 'name' | 'required' | 'type'>
 export type AuditFieldLabelOverrides = Omit<TextField, 'access' | 'name' | 'required' | 'type'>

@@ -91,7 +91,9 @@ Hooks automatically track all changes:
 Built-in security and privacy protection:
 
 - **Automatic Redaction**: Sensitive fields (passwords, tokens, API keys, etc.) are automatically redacted
+- **Field-Level Control**: Configure individual fields to be redacted or ignored using custom field properties
 - **Field Filtering**: Certain fields (like login timestamps) are excluded from audit logs
+- **Group Support**: Redact or ignore entire groups or specific fields within groups
 - **Read-Only Fields**: Audit fields cannot be modified by users
 - **Access Control**: Only admin users can view audit information
 
@@ -128,8 +130,8 @@ yarn add @flexiweb/audit
 
 This plugin requires the following peer dependencies:
 
-- `payload@3.60.0`
-- `@flexiweb/core@3.60.1`
+- `payload@3.65.0`
+- `@flexiweb/core@3.65.0`
 
 ### Basic Usage
 
@@ -155,6 +157,18 @@ export default buildConfig({
   ],
   // ... rest of your config
 })
+```
+
+Define your autoRun config so the audits queue get processed
+
+```typescript
+import {DEFAULT_QUEUE_AUTORUN_CONFIG} from '@flexiweb/audit/constants'
+ // ... payload config
+ jobs: {
+    autoRun: [DEFAULT_QUEUE_AUTORUN_CONFIG],
+  },
+ // ... payload config
+
 ```
 
 #### 2. Audit Fields Are Automatically Added
@@ -201,6 +215,60 @@ const doc = await payload.findByID({
 
 console.log(doc.audit.createdBy) // "user@example.com (123)"
 console.log(doc.audit.updatedAt) // "2024-01-15T10:30:00.000Z"
+```
+
+#### 5. Configure Field-Level Redaction and Ignoring
+
+You can control how fields appear in audit logs by adding custom properties to your field definitions:
+
+```typescript
+{
+  slug: 'my-collection',
+  fields: [
+    {
+      name: 'title',
+      type: 'text',
+      // Normal field - appears in audit logs
+    },
+    {
+      name: 'secret',
+      type: 'text',
+      custom: {
+        flexiweb: {
+          audit: {
+            isRedacted: true, // Will appear as "REDACTED" in audit logs
+          },
+        },
+      },
+    },
+    {
+      name: 'internalNotes',
+      type: 'textarea',
+      custom: {
+        flexiweb: {
+          audit: {
+            ignore: true, // Completely excluded from audit logs
+          },
+        },
+      },
+    },
+    {
+      name: 'sensitiveGroup',
+      type: 'group',
+      custom: {
+        flexiweb: {
+          audit: {
+            isRedacted: true, // Entire group redacted
+          },
+        },
+      },
+      fields: [
+        { name: 'data1', type: 'text' },
+        { name: 'data2', type: 'text' },
+      ],
+    },
+  ],
+}
 ```
 
 ---
@@ -270,16 +338,19 @@ The plugin uses PayloadCMS hooks to automatically track changes.
 #### Collection Hooks
 
 **Before Change Hook** (`setAuditData`):
+
 - Sets `audit.createdBy` and `audit.createdAt` on create
 - Sets `audit.updatedBy` and `audit.updatedAt` on update
 - Sets `audit.publishedBy` and `audit.publishedAt` when publishing
 
 **After Change Hook** (`createAuditLogsAfterCollectionChange`):
+
 - Queues audit log creation for create and update operations
 - Captures before/after data using smart diffing
 - Only runs if full audits are enabled
 
 **After Delete Hook** (`createAuditLogsAfterCollectionDelete`):
+
 - Queues audit log creation for delete operations
 - Captures the deleted document data
 - Only runs if full audits are enabled
@@ -287,9 +358,11 @@ The plugin uses PayloadCMS hooks to automatically track changes.
 #### Global Hooks
 
 **Before Change Hook** (`setAuditData`):
+
 - Sets `audit.updatedBy` and `audit.updatedAt` on global changes
 
 **After Change Hook** (`createAuditLogsAfterGlobalChange`):
+
 - Queues audit log creation for global changes
 - Captures before/after data
 - Only runs if full audits are enabled
@@ -327,9 +400,178 @@ Certain fields are excluded from audit logs:
 - `loginAt`, `lastLogin`
 - `audit` (to prevent circular references)
 
-#### Custom Redaction
+#### Custom Field-Level Configuration
 
-You can extend the redaction list by modifying the constants or using custom logic in hooks.
+You can control how individual fields are handled in audit logs by adding custom properties to your field definitions. This provides fine-grained control over redaction and exclusion at the field level.
+
+##### Redacting Fields
+
+To redact a specific field in audit logs, add `isRedacted: true` to the field's custom configuration:
+
+```typescript
+{
+  name: 'secret',
+  type: 'text',
+  custom: {
+    flexiweb: {
+      audit: {
+        isRedacted: true,
+        path: 'secret', // Optional: explicit path (defaults to field name)
+      },
+    },
+  },
+}
+```
+
+Redacted fields will appear as `REDACTED` in audit logs instead of their actual values.
+
+##### Ignoring Fields
+
+To completely exclude a field from audit logs, add `ignore: true`:
+
+```typescript
+{
+  name: 'audit',
+  type: 'group',
+  custom: {
+    flexiweb: {
+      audit: {
+        ignore: true,
+        path: 'audit', // Optional: explicit path
+      },
+    },
+  },
+  fields: [
+    { name: 'createdAt', type: 'date' },
+    { name: 'updatedAt', type: 'date' },
+  ],
+}
+```
+
+Ignored fields are completely removed from audit log diffs.
+
+##### Redacting Relationships
+
+You can redact relationship fields, which will convert the relationship to its ID and then redact it:
+
+```typescript
+{
+  name: 'user',
+  type: 'relationship',
+  relationTo: 'users',
+  custom: {
+    flexiweb: {
+      audit: {
+        isRedacted: true,
+        path: 'user',
+      },
+    },
+  },
+}
+```
+
+##### Group-Level Redaction
+
+You can redact entire groups by adding the property to the group field:
+
+```typescript
+{
+  name: 'redactedGroup',
+  type: 'group',
+  custom: {
+    flexiweb: {
+      audit: {
+        isRedacted: true,
+        path: 'redactedGroup',
+      },
+    },
+  },
+  fields: [
+    { name: 'g1', type: 'text' },
+    { name: 'g2', type: 'text' },
+  ],
+}
+```
+
+The entire group will appear as `REDACTED` in audit logs.
+
+##### Partial Group Redaction
+
+You can redact specific fields within a group while keeping others visible:
+
+```typescript
+{
+  name: 'partlyRedactedGroup',
+  type: 'group',
+  fields: [
+    {
+      name: 'g1',
+      type: 'text',
+      custom: {
+        flexiweb: {
+          audit: {
+            isRedacted: true,
+            path: 'partlyRedactedGroup.g1',
+          },
+        },
+      },
+    },
+    {
+      name: 'g2',
+      type: 'text',
+      // This field will appear normally in audit logs
+    },
+    {
+      name: 'g3',
+      type: 'text',
+      custom: {
+        flexiweb: {
+          audit: {
+            ignore: true,
+            path: 'partlyRedactedGroup.g3',
+          },
+        },
+      },
+    },
+  ],
+}
+```
+
+##### Nested Groups
+
+Custom audit properties work with nested groups as well:
+
+```typescript
+{
+  name: 'nested',
+  type: 'group',
+  fields: [
+    { name: 'a', type: 'text' }, // Normal field
+    {
+      name: 'b',
+      type: 'text',
+      custom: {
+        flexiweb: {
+          audit: {
+            isRedacted: true,
+            path: 'nested.b',
+          },
+        },
+      },
+    },
+  ],
+}
+```
+
+##### Path Specification
+
+The `path` property is optional but recommended for nested fields. If not specified, the plugin will automatically construct the path from the field hierarchy. Explicit paths are useful for:
+
+- Ensuring correct path matching in nested structures
+- Handling complex field relationships
+- Debugging audit log issues
+
+**Note**: The path should match the full dot-notation path to the field (e.g., `partlyRedactedGroup.g1` for a field `g1` inside a group `partlyRedactedGroup`).
 
 ### Configuration
 
@@ -339,17 +581,17 @@ You can extend the redaction list by modifying the constants or using custom log
 type AuditPluginConfig = {
   // Exclude collections from receiving audit fields
   excludedCollections?: CollectionSlug[]
-  
+
   // Exclude globals from receiving audit fields
   excludedGlobals?: string[]
-  
+
   // Full audit logging configuration
   fullAudits: {
     disabled: boolean // Disable detailed audit logs
     excludedCollections: CollectionSlug[] // Skip full audits for specific collections
     excludedGlobals: GlobalSlug[] // Skip full audits for specific globals
   }
-  
+
   // Override audit logs collection
   overrides?: {
     audits?: {
@@ -357,7 +599,7 @@ type AuditPluginConfig = {
       overrides?: Omit<CollectionConfig, 'fields' | 'slug'> // Customize collection config
     }
   }
-  
+
   // User field to use for tracking (default: 'email')
   usernameField?: string
 }
@@ -369,13 +611,13 @@ type AuditPluginConfig = {
 flexiwebAuditPlugin({
   // Skip audit fields for these collections
   excludedCollections: ['sessions', 'media'],
-  
+
   // Skip audit fields for these globals
   excludedGlobals: ['site-settings'],
-  
+
   // Use a different user field
   usernameField: 'username',
-  
+
   // Configure full audits
   fullAudits: {
     disabled: false,
@@ -383,7 +625,7 @@ flexiwebAuditPlugin({
     excludedCollections: ['analytics-events', 'webhooks'],
     excludedGlobals: [],
   },
-  
+
   // Customize audit logs collection
   overrides: {
     audits: {
@@ -482,6 +724,50 @@ flexiwebAuditPlugin({
 })
 ```
 
+### Field-Level Redaction and Ignoring
+
+You can control how individual fields are handled in audit logs by adding custom properties directly to your field definitions. This is the recommended approach for fine-grained control over sensitive data:
+
+```typescript
+{
+  slug: 'products',
+  fields: [
+    {
+      name: 'name',
+      type: 'text',
+      // Normal field - appears in audit logs
+    },
+    {
+      name: 'apiKey',
+      type: 'text',
+      custom: {
+        flexiweb: {
+          audit: {
+            isRedacted: true, // Appears as "REDACTED" in audit logs
+          },
+        },
+      },
+    },
+    {
+      name: 'internalMetadata',
+      type: 'group',
+      custom: {
+        flexiweb: {
+          audit: {
+            ignore: true, // Completely excluded from audit logs
+          },
+        },
+      },
+      fields: [
+        { name: 'notes', type: 'textarea' },
+      ],
+    },
+  ],
+}
+```
+
+This approach works alongside the automatic redaction of common sensitive fields (passwords, tokens, etc.) and gives you complete control over your audit trail.
+
 ### Accessing Audit Data
 
 You can access audit fields and logs programmatically:
@@ -552,11 +838,7 @@ import {
 Utility functions for working with audit data:
 
 ```typescript
-import {
-  filterChangedKeysKeepObjects,
-  redactKeys,
-  enqueueAuditLog,
-} from '@flexiweb/audit/utils'
+import { filterChangedKeysKeepObjects, redactKeys, enqueueAuditLog } from '@flexiweb/audit/utils'
 ```
 
 ### How It Works

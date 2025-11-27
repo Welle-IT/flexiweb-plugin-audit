@@ -1,5 +1,5 @@
 import { isModuleEnabled } from '@flexiweb/core/utils'
-import { type Config, deepMerge, type Field } from 'payload'
+import { type CollectionConfig, type Config, deepMerge, type Field } from 'payload'
 
 import type {
   AuditPluginConfig,
@@ -44,7 +44,11 @@ export const flexiwebAuditPlugin =
     }
 
     config.collections = config.collections || []
-    config.collections.push(getAuditLogs(pluginOptions))
+    const auditLogs = deepMerge<CollectionConfig>(
+      getAuditLogs(pluginOptions),
+      pluginOptions.overrides?.audits?.overrides || {},
+    )
+    config.collections.push(auditLogs)
     const exludedCollections = pluginOptions.excludedCollections || []
     exludedCollections.push(AUDIT_LOGS_SLUG)
 
@@ -56,6 +60,7 @@ export const flexiwebAuditPlugin =
         const fields: Field[] = collection.fields ?? []
         collection.fields = processAuditGroupFields(
           fields,
+          pluginOptions,
           (collection?.versions as IncomingCollectionVersions)?.drafts as boolean,
         )
 
@@ -94,6 +99,7 @@ export const flexiwebAuditPlugin =
         const fields: Field[] = global.fields ?? []
         global.fields = processAuditGroupFields(
           fields,
+          pluginOptions,
           (global?.versions as IncomingCollectionVersions)?.drafts as boolean,
         )
 
@@ -124,32 +130,6 @@ export const flexiwebAuditPlugin =
       config.jobs = config.jobs || {}
       config.jobs.tasks = config.jobs.tasks || []
       config.jobs.tasks = [...config.jobs.tasks, createAuditLogTask]
-
-      config.jobs.autoRun = config.jobs.autoRun || []
-      if (typeof config.jobs.autoRun === 'function') {
-        const original = config.jobs.autoRun
-
-        config.jobs.autoRun = async (payload) => {
-          const result = await Promise.resolve(original(payload))
-
-          return [
-            ...result,
-            {
-              cron: '* * * * *',
-              limit: 500,
-              queue: 'audit',
-            },
-          ]
-        }
-      } else {
-        config.jobs.autoRun = deepMerge(config.jobs.autoRun, [
-          {
-            cron: '* * * * *', // every minute
-            limit: 500,
-            queue: 'audit',
-          },
-        ])
-      }
     }
 
     return config

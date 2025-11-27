@@ -1,6 +1,6 @@
 {
   "name": "@flexiweb/audit",
-  "version": "3.65.0",
+  "version": "3.65.1",
   "description": "Audit plugin for Flexiweb powered by PayloadCMS. Adds audit fields to collections, provides the possibility to full-Audit using dedicated collection.",
   "license": "SEE LICENSE IN LICENSE.md",
   "type": "module",
